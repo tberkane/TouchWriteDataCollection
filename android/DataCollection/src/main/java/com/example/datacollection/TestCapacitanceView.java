@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RadialGradient;
 import android.graphics.Shader;
+import android.util.Log;
 import android.util.Size;
 import android.view.MotionEvent;
 import android.view.View;
@@ -31,7 +32,10 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
     static {
         OpenCVLoader.initDebug();
     }
-    
+
+    private static final String TAG = TestCapacitanceView.class.getSimpleName();
+
+
     // --------------------------------------------------------
     // --------------------------------------------------------
     //                        OPTIONS
@@ -49,9 +53,11 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
     private final TouchDetector touchDetector = new TouchDetector();
     private final TouchTracker touchTracker = new TouchTracker();
     private TouchMap touchMap;
+    private final boolean rightHanded;
 
-    public TestCapacitanceView(Context context) {
+    public TestCapacitanceView(Context context, boolean rightHanded) {
         super(context);
+        this.rightHanded = rightHanded;
     }
 
 
@@ -67,7 +73,12 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
             for (int y = 0; y < caph; y++) {
                 for (int x = 0; x < capw; x++) {
                     int val = capImage[y * capw + x];
-                    int index = (capw - x - 1) * caph + y; // dirty fix
+                    int index;
+                    if (rightHanded) {
+                        index = (capw - x - 1) * caph + y; // dirty fix
+                    } else {
+                        index = x * caph + (caph - y - 1);
+                    }
                     if (val <= 15) {
                         threshCapImage[index] = 0;
                     } else {
@@ -82,22 +93,35 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
             Mat labels = new Mat();
             int numCC = Imgproc.connectedComponentsWithStats(img, labels, stats, new Mat());
 
-            // find min cc area
-//            double minArea = Double.MAX_VALUE;
-//            for (int i = 0; i < numCC; i++) {
-//                double area = stats.get(i, Imgproc.CC_STAT_AREA)[0];
-//                if (area < minArea) {
-//                    minArea = area;
-//                }
-//            }
-
-            // find min cc leftmost x
-            double minX = Double.MAX_VALUE;
+            // find max cc area for no touch = no write
+            double maxArea = Double.MIN_VALUE;
             for (int i = 1; i < numCC; i++) {
-                double x = stats.get(i, Imgproc.CC_STAT_LEFT)[0];
-                if (x < minX) {
-                    minX = x;
+                double area = stats.get(i, Imgproc.CC_STAT_AREA)[0];
+                if (area > maxArea) {
+                    maxArea = area;
                 }
+            }
+
+            // find limit cc leftmost x
+            double limitX;
+            if (rightHanded) {
+                double minX = Double.MAX_VALUE;
+                for (int i = 1; i < numCC; i++) {
+                    double x = stats.get(i, Imgproc.CC_STAT_LEFT)[0];
+                    if (x < minX) {
+                        minX = x;
+                    }
+                }
+                limitX = minX;
+            } else {
+                double maxX = Double.MIN_VALUE;
+                for (int i = 1; i < numCC; i++) {
+                    double x = stats.get(i, Imgproc.CC_STAT_LEFT)[0];
+                    if (x > maxX) {
+                        maxX = x;
+                    }
+                }
+                limitX = maxX;
             }
 
             // determine which CCs have area too large or are not smallest CC
@@ -105,7 +129,8 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
             for (int i = 0; i < numCC; i++) {
                 double area = stats.get(i, Imgproc.CC_STAT_AREA)[0];
                 double x = stats.get(i, Imgproc.CC_STAT_LEFT)[0];
-                if (x > minX || area > 12) {
+                Log.i(TAG, x+", "+limitX);
+                if ((rightHanded && (x < limitX || x < 25)) || (!rightHanded && (x > limitX || x > 25)) || area > 12 || maxArea < 50) {
                     ccBlacklist.add(i);
                 }
             }
@@ -115,15 +140,23 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
                 for (int x = 0; x < capw; x++) {
                     int label = (int) labels.get(x, y)[0];
                     if (ccBlacklist.contains(label)) {
-                        capImage[y * capw + (capw - x - 1)] = 0;
+                        int index;
+                        if (rightHanded) {
+                            index = y * capw + (capw - x - 1); // dirty fix
+                        } else {
+                            index = (caph - y - 1) * capw + x;
+                        }
+                        capImage[index] = 0;
+
                     }
                 }
             }
 
+
             // fix because capacitive screen is weird...
             for (int i = 0; i < capImage.length; i++) {
                 if (capImage[i] > 10) {
-                    capImage[i] = (short) (Math.sqrt(200 * capImage[i]) + 50);
+                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
                 }
             }
 
@@ -171,7 +204,10 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
                 }
 
                 // dirty fix for inverted axes
-                canvas.drawRect(y * pxh, (capw - x - 1) * pxw, (y + 1) * pxh, (capw - x) * pxw, capPaint);
+                if (rightHanded) {
+                    canvas.drawRect((caph - y - 1) * pxh, x * pxw, (caph - y) * pxh, (x + 1) * pxw, capPaint);
+                } else
+                    canvas.drawRect(y * pxh, (capw - x - 1) * pxw, (y + 1) * pxh, (capw - x) * pxw, capPaint);
 //                canvas.drawRect(x * pxw, y * pxh, (x + 1) * pxw, (y + 1) * pxh, capPaint);
                 if (showText) {
 //                    canvas.drawText(Integer.toString(val), x * pxw, (y + 1) * pxh, capValTextPaint);
@@ -196,7 +232,10 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
         canvas.save();
         // dirty fix for inverted axes
         Size screenSize = CapImage.getScreenSize();
-        canvas.translate(touch.y, screenSize.getWidth() - touch.x);
+        if (rightHanded)
+            canvas.translate(screenSize.getHeight() - touch.y, touch.x);
+        else
+            canvas.translate(touch.y, screenSize.getWidth() - touch.x);
 //        canvas.translate(touch.x, touch.y);
         touchPaint.setStyle(Paint.Style.STROKE);
 

@@ -10,9 +10,9 @@
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="64dp"
         android:text="@string/_1_write_each_letter_with_the_stylus_following_the_outline_n2_click_on_next_to_move_to_the_next_letter_n3_make_sure_your_hand_is_always_resting_on_the_screen_when_writing_n4_click_on_the_button_below_when_you_are_ready_to_start"
         android:textSize="20sp"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -21,38 +21,53 @@
         android:id="@+id/startButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="59dp"
-        android:layout_marginBottom="38dp"
+        android:layout_marginTop="64dp"
         android:onClick="startDataCollection"
         android:text="@string/start"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@+id/participantIdEditText" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/switch1" />
 
     <EditText
         android:id="@+id/participantIdEditText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="42dp"
+        android:layout_marginTop="64dp"
         android:autofillHints=""
         android:ems="10"
         android:hint="@string/participant_id"
         android:inputType="number"
         android:minHeight="48dp"
         android:textColorHint="#757575"
-        app:layout_constraintBottom_toTopOf="@+id/textView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.499"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView" />
 
     <Button
         android:id="@+id/capacitanceButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="40dp"
-        android:layout_marginBottom="38dp"
         android:onClick="testCapacitance"
         android:text="@string/test_capacitance"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@+id/startButton"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <Switch
+        android:id="@+id/switch1"
+        android:layout_width="wrap_content"
+        android:layout_height="64dp"
+        android:layout_marginTop="64dp"
+        android:checked="true"
+        android:minWidth="48dp"
+        android:minHeight="48dp"
+        android:showText="true"
+        android:textOff="@string/left_handed"
+        android:textOn="@string/right_handed"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/participantIdEditText"
+        tools:ignore="UseSwitchCompatOrMaterialXml" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -21,6 +21,7 @@ public class DataCollectionActivity extends AppCompatActivity {
 
     private DataCollectionView view;
     private String participantId;
+    private boolean rightHanded;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,20 +29,24 @@ public class DataCollectionActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         this.participantId = intent.getStringExtra("participantId");
+        this.rightHanded = intent.getBooleanExtra("rightHanded", true);
 
+        view = new DataCollectionView(this, rightHanded);
 
-        view = new DataCollectionView(this);
-
-        setContentView(R.layout.activity_data_collection);
+        if (rightHanded)
+            setContentView(R.layout.activity_data_collection_right_handed);
+        else
+            setContentView(R.layout.activity_data_collection_left_handed);
 
         ReactiveButton nextButton = findViewById(R.id.nextButton);
         nextButton.setOnClickListener(this::startNextLetter);
 
+        ReactiveButton resetButton = findViewById(R.id.resetButton);
+        resetButton.setOnClickListener(this::resetLetter);
+
         ConstraintLayout myLayout = findViewById(R.id.constraintLayout);
 
-        view.setLayoutParams(new ConstraintLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                ConstraintLayout.LayoutParams.MATCH_PARENT));
+        view.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT));
 
         myLayout.addView(view);
 
@@ -54,13 +59,7 @@ public class DataCollectionActivity extends AppCompatActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
-            getWindow().getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         }
     }
 
@@ -112,6 +111,13 @@ public class DataCollectionActivity extends AppCompatActivity {
      */
     public void startNextLetter(View view) {
         this.view.startNextLetter(this, participantId);
+    }
+
+    /**
+     * Restart the current letter from scratch
+     */
+    public void resetLetter(View view) {
+        this.view.resetLetter();
     }
 
 }

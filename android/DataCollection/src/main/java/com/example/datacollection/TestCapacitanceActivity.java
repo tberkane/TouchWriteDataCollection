@@ -1,5 +1,6 @@
 package com.example.datacollection;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
@@ -8,11 +9,16 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class TestCapacitanceActivity extends AppCompatActivity {
     private TestCapacitanceView view;
+    private boolean rightHanded;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        view = new TestCapacitanceView(this);
+
+        Intent intent = getIntent();
+        this.rightHanded = intent.getBooleanExtra("rightHanded", true);
+
+        view = new TestCapacitanceView(this, rightHanded);
         setContentView(view);
     }
 

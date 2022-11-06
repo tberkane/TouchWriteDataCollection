@@ -86,10 +86,12 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
     private float currentX;
     private float currentY;
     private final int touchTolerance;
+    private final boolean rightHanded;
 
-    public DataCollectionView(Context context) {
+    public DataCollectionView(Context context, boolean rightHanded) {
         super(context);
 
+        this.rightHanded = rightHanded;
         this.lettersToWrite = new ArrayList<>(Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
         Collections.shuffle(this.lettersToWrite);
         this.currentLetterToWrite = lettersToWrite.remove(lettersToWrite.size() - 1);
@@ -134,7 +136,6 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
     public void onCapImage(final CapacitiveImage sample) {
         short[] capImage = sample.getCapImg();
         if (capImage != null && recordCapImages) {
-
             recordedCapImages.get(currentLetterToWrite).put(sample.getTimeStamp(), Map.of("CAP_IMG", Arrays.copyOf(capImage, capImage.length), "PEN_POS", new short[]{(short) motionTouchEventX, (short) motionTouchEventY}));
 
             byte[] threshCapImage = new byte[capImage.length];
@@ -145,7 +146,12 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
             for (int y = 0; y < caph; y++) {
                 for (int x = 0; x < capw; x++) {
                     int val = capImage[y * capw + x];
-                    int index = (capw - x - 1) * caph + y; // dirty fix
+                    int index;
+                    if (rightHanded) {
+                        index = (capw - x - 1) * caph + y; // dirty fix
+                    } else {
+                        index = x * caph + (caph - y - 1);
+                    }
                     if (val <= 15) {
                         threshCapImage[index] = 0;
                     } else {
@@ -169,13 +175,26 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
                 }
             }
 
-            // find min cc leftmost x
-            double minX = Double.MAX_VALUE;
-            for (int i = 1; i < numCC; i++) {
-                double x = stats.get(i, Imgproc.CC_STAT_LEFT)[0];
-                if (x < minX) {
-                    minX = x;
+            // find limit cc leftmost x
+            double limitX;
+            if (rightHanded) {
+                double minX = Double.MAX_VALUE;
+                for (int i = 1; i < numCC; i++) {
+                    double x = stats.get(i, Imgproc.CC_STAT_LEFT)[0];
+                    if (x < minX) {
+                        minX = x;
+                    }
                 }
+                limitX = minX;
+            } else {
+                double maxX = Double.MIN_VALUE;
+                for (int i = 1; i < numCC; i++) {
+                    double x = stats.get(i, Imgproc.CC_STAT_LEFT)[0];
+                    if (x > maxX) {
+                        maxX = x;
+                    }
+                }
+                limitX = maxX;
             }
 
             // determine which CCs have area too large or are not smallest CC
@@ -183,7 +202,7 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
             for (int i = 0; i < numCC; i++) {
                 double area = stats.get(i, Imgproc.CC_STAT_AREA)[0];
                 double x = stats.get(i, Imgproc.CC_STAT_LEFT)[0];
-                if (x > minX || x > 25 || area > 12 || maxArea < 50) {
+                if ((rightHanded && (x < limitX || x < 25)) || (!rightHanded && (x > limitX || x > 25)) || area > 12 || maxArea < 50) {
                     ccBlacklist.add(i);
                 }
             }
@@ -193,15 +212,23 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
                 for (int x = 0; x < capw; x++) {
                     int label = (int) labels.get(x, y)[0];
                     if (ccBlacklist.contains(label)) {
-                        capImage[y * capw + (capw - x - 1)] = 0;
+                        int index;
+                        if (rightHanded) {
+                            index = y * capw + (capw - x - 1); // dirty fix
+                        } else {
+                            index = (caph - y - 1) * capw + x;
+                        }
+                        capImage[index] = 0;
+
                     }
                 }
             }
 
+
             // fix because capacitive screen is weird...
             for (int i = 0; i < capImage.length; i++) {
                 if (capImage[i] > 10) {
-                    capImage[i] = (short) (Math.sqrt(200 * capImage[i]) + 50);
+                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
                 }
             }
 
@@ -213,21 +240,37 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
     @Override
     protected void onDraw(Canvas canvas) {
         if (touchMap != null && !touchMap.isEmpty()) {
-            // right handed user
-            float stylusX = Float.MAX_VALUE;
-            float stylusY = Float.MAX_VALUE;
-            for (Map.Entry<MotionEvent.PointerProperties, MotionEvent.PointerCoords> ent : touchMap.entrySet()) {
-                MotionEvent.PointerCoords touchCoords = ent.getValue();
-                // for right handed user, stylus position is position of leftmost screen touch
-                if (touchCoords.y < stylusY) {
-                    stylusX = touchCoords.x;
-                    stylusY = touchCoords.y;
+            if (rightHanded) {
+                float stylusX = Float.MAX_VALUE;
+                float stylusY = Float.MAX_VALUE;
+                for (Map.Entry<MotionEvent.PointerProperties, MotionEvent.PointerCoords> ent : touchMap.entrySet()) {
+                    MotionEvent.PointerCoords touchCoords = ent.getValue();
+                    // for right handed user, stylus position is position of leftmost screen touch
+                    if (touchCoords.y < stylusY) {
+                        stylusX = touchCoords.x;
+                        stylusY = touchCoords.y;
+                    }
                 }
+                // dirty fix for inverted axes
+                Size screenSize = CapImage.getScreenSize();
+                this.motionTouchEventX = screenSize.getHeight() - stylusY;
+                this.motionTouchEventY = stylusX;
+            } else {
+                float stylusX = Float.MIN_VALUE;
+                float stylusY = Float.MIN_VALUE;
+                for (Map.Entry<MotionEvent.PointerProperties, MotionEvent.PointerCoords> ent : touchMap.entrySet()) {
+                    MotionEvent.PointerCoords touchCoords = ent.getValue();
+                    // for left handed user, stylus position is position of rightmost screen touch
+                    if (touchCoords.y > stylusY) {
+                        stylusX = touchCoords.x;
+                        stylusY = touchCoords.y;
+                    }
+                }
+                // dirty fix for inverted axes
+                Size screenSize = CapImage.getScreenSize();
+                this.motionTouchEventX = stylusY;
+                this.motionTouchEventY = screenSize.getWidth() - stylusX;
             }
-            // dirty fix for inverted axes
-            Size screenSize = CapImage.getScreenSize();
-            this.motionTouchEventX = stylusY;
-            this.motionTouchEventY = screenSize.getWidth() - stylusX;
 
             if (prevTouchMap == null || prevTouchMap.isEmpty()) {
                 this.touchStart();
@@ -251,8 +294,10 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
         this.extraBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         this.extraCanvas = new Canvas(extraBitmap);
         this.extraCanvas.drawColor(backgroundColor);
-
-        this.letterXPos = width / 3f;
+        if (rightHanded)
+            this.letterXPos = width / 3f;
+        else
+            this.letterXPos = 2f * width / 3f;
         this.letterYPos = (height / 2f - (letterPaint.descent() + letterPaint.ascent()) / 2f);
         extraCanvas.drawText(currentLetterToWrite, letterXPos, letterYPos, letterPaint);
     }
@@ -295,13 +340,19 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
         capStreamer.stop();
     }
 
+    // clear canvas and draw new outline
+    private void resetCanvas() {
+        this.extraCanvas.drawColor(backgroundColor);
+        extraCanvas.drawText(currentLetterToWrite, letterXPos, letterYPos, letterPaint);
+    }
+
     public void startNextLetter(AppCompatActivity a, String participantId) {
         if (lettersToWrite.isEmpty()) {
             recordCapImages = false;
 
             // convert data to json and save to fs
             String jsonData = gson.toJson(recordedCapImages);
-            String filename = "recording_id" + participantId + ".json";
+            String filename = "recording_id" + participantId + "_" + (rightHanded ? "right" : "left") + "Handed.json";
             File file = new File(saveDirectory, filename);
             FileWriter writer = null;
             try {
@@ -323,10 +374,13 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
             // get next letter
             this.currentLetterToWrite = lettersToWrite.remove(lettersToWrite.size() - 1);
             this.recordedCapImages.put(currentLetterToWrite, new HashMap<>());
-            // reset canvas and draw new outline
-            this.extraCanvas.drawColor(backgroundColor);
-            extraCanvas.drawText(currentLetterToWrite, letterXPos, letterYPos, letterPaint);
+            resetCanvas();
         }
+    }
+
+    public void resetLetter() {
+        resetCanvas();
+        this.recordedCapImages.get(currentLetterToWrite).clear();
     }
 }
 

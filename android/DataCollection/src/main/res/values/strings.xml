@@ -6,4 +6,8 @@
     <string name="start">Start</string>
     <string name="participant_id">Participant ID</string>
     <string name="test_capacitance">Test capacitance</string>
+    <string name="restart_digit">Restart digit</string>
+    <string name="right_handed">Right-handed</string>
+    <string name="left_handed">Left-handed</string>
+    <string name="back_to_menu">Back to menu</string>
 </resources>
