@@ -6,10 +6,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RadialGradient;
 import android.graphics.Shader;
-import android.os.Build;
-import android.os.Environment;
-import android.util.AttributeSet;
-import android.util.Log;
 import android.util.Size;
 import android.view.MotionEvent;
 import android.view.View;
@@ -21,109 +17,48 @@ import com.example.capimage.TouchDetector;
 import com.example.capimage.TouchTracker;
 import com.example.capimage.TouchTracker.TouchMap;
 import com.example.capimage.TouchTracker.TouchMapCallback;
-import com.google.gson.Gson;
 
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class CapView extends View implements TouchMapCallback, CapImageStreamer.CapImageCallback {
+public class TestCapacitanceView extends View implements TouchMapCallback, CapImageStreamer.CapImageCallback {
     static {
         OpenCVLoader.initDebug();
     }
-
-    private static final String TAG = CapView.class.getSimpleName();
-
-
+    
     // --------------------------------------------------------
     // --------------------------------------------------------
     //                        OPTIONS
     // --------------------------------------------------------
     // --------------------------------------------------------
-    private boolean showInformation = true;
-    private boolean showText = false;
-    private boolean showMatrix = true;
-    private boolean showNegativeValues = false;
-    private boolean showTouchPoints = true;
+    private final boolean showText = false;
+    private final boolean showMatrix = true;
+    private final boolean showNegativeValues = false;
+    private final boolean showTouchPoints = true;
     private int viewOffset = 0;
-
-
-    private Gson gson = new Gson();
-    private FileWriter writer = null;
 
     private short[] capImage;
 
-
-    private CapImageStreamer capStreamer = new CapImageStreamer(this);
-    private TouchDetector touchDetector = new TouchDetector();
-    private TouchTracker touchTracker = new TouchTracker();
+    private final CapImageStreamer capStreamer = new CapImageStreamer(this);
+    private final TouchDetector touchDetector = new TouchDetector();
+    private final TouchTracker touchTracker = new TouchTracker();
     private TouchMap touchMap;
 
-    private double capPixelSizeInMm;
-
-    private long time;
-
-    boolean drawText = false;
-
-    // Scanner, Coin, Dungeon, Card
-
-    public CapView(Context context) {
+    public TestCapacitanceView(Context context) {
         super(context);
-        File root = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "CapacitiveMatrices");
-        Log.i(TAG, "Save Path: " + root.toString());
-        if (!root.exists()) {
-            if (!root.mkdirs()) {
-                Log.e(TAG, "Error #001: Folder not created");
-            }
-        }
-
-        String filename = "recording_" + System.currentTimeMillis() + "-HandIK.json";
-        File file = new File(root, filename);
-        try {
-            writer = new FileWriter(file, true);
-        } catch (IOException e) {
-            Log.e(TAG, "Error #007:" + e.toString());
-        }
-
-
-        if (Build.PRODUCT.equals("gts210vewifixx")) {
-            capPixelSizeInMm = 4.022;
-        } else {
-            throw new UnsupportedOperationException("Your device is not supported. Build.PRODUCT:" + Build.PRODUCT + " Build.ID:" + Build.ID);
-        }
-
-
     }
 
-    public CapView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-    }
-
-    public CapView(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-    }
 
     @Override
     public void onCapImage(final CapacitiveImage sample) {
         this.capImage = sample.getCapImg();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                String json = gson.toJson(sample);
-                saveToFile(json);
-                // Run whatever background code you want here.
-            }
-        }).start();
         if (capImage != null) {
-
             byte[] threshCapImage = new byte[capImage.length];
             // thresholding
             Size capSize = CapImage.getCapSize();
@@ -188,34 +123,23 @@ public class CapView extends View implements TouchMapCallback, CapImageStreamer.
             // fix because capacitive screen is weird...
             for (int i = 0; i < capImage.length; i++) {
                 if (capImage[i] > 10) {
-                    capImage[i] = (short) (Math.sqrt(200 * capImage[i])+50);
+                    capImage[i] = (short) (Math.sqrt(200 * capImage[i]) + 50);
                 }
             }
 
-
-            touchTracker.update(touchDetector.findTouchPoints(capImage), CapView.this);
+            touchTracker.update(touchDetector.findTouchPoints(capImage), TestCapacitanceView.this);
         }
         postInvalidate();
     }
 
-    private Paint capPaint = new Paint();
+    private final Paint capPaint = new Paint();
 
-    private Paint capValTextPaint = new Paint() {{
+    private final Paint capValTextPaint = new Paint() {{
         setTextSize(8 * getResources().getDisplayMetrics().density);
         setColor(Color.BLACK);
     }};
-    private Paint statusTextPaint = new Paint() {{
-        setTextSize(12 * getResources().getDisplayMetrics().density);
-        setColor(Color.WHITE);
-    }};
-    private Paint touchPaint = new Paint() {{
+    private final Paint touchPaint = new Paint() {{
         setColor(Color.RED);
-        setStrokeWidth(2);
-    }};
-
-    private Paint buttonPaint = new Paint() {{
-        setColor(Color.GRAY);
-        setStyle(Style.FILL);
         setStrokeWidth(2);
     }};
 
@@ -238,7 +162,7 @@ public class CapView extends View implements TouchMapCallback, CapImageStreamer.
                     capPaint.setARGB(255, 0, color, color);
                     capValTextPaint.setARGB(255, 0, 0, 0);
                 } else if (val > 0) {
-                    int color = Math.max(0, Math.min(val, 255));
+                    int color = Math.min(val, 255);
                     capPaint.setARGB(255, color, color, color);
                     int tcolor = (color < 127) ? 180 : 0;
                     capValTextPaint.setARGB(255, tcolor, tcolor, tcolor);
@@ -266,25 +190,10 @@ public class CapView extends View implements TouchMapCallback, CapImageStreamer.
 
     /***
      *
-     * @param canvas
-     * @param touch
-     * @param r
      * @param glow Color.TRANSPARENT for no glow effect
      */
     private void drawTouchPoint(Canvas canvas, MotionEvent.PointerCoords touch, double r, int glow) {
         canvas.save();
-
-        //_paintBlur.set(_paintSimple);
-        //_paintBlur.setColor(Color.argb(235, 255, 0, 0));
-
-        //_paintSimple.setAntiAlias(true);
-        //_paintSimple.setDither(true);
-        //_paintSimple.setColor(Color.argb(248, 255, 255, 255));
-        //_paintSimple.setStrokeWidth(10f);
-        //_paintSimple.setStyle(Paint.Style.STROKE);
-        //_paintSimple.setStrokeJoin(Paint.Join.ROUND);
-        //_paintSimple.setStrokeCap(Paint.Cap.ROUND);
-
         // dirty fix for inverted axes
         Size screenSize = CapImage.getScreenSize();
         canvas.translate(touch.y, screenSize.getWidth() - touch.x);
@@ -303,24 +212,11 @@ public class CapView extends View implements TouchMapCallback, CapImageStreamer.
             canvas.drawOval((float) -r, (float) -r, (float) r, (float) r, touchPaint);
         }
 
-        if (false) {
-            if (touch.pressure > 0) {
-                float pr = touch.pressure * 20;
-                canvas.drawOval(-pr, -pr, pr, pr, touchPaint);
-            }
-            /* TODO: orientation, distance */
-            if (touch.touchMajor > 0 && touch.touchMinor > 0) {
-                float rx = touch.touchMajor * 20;
-                float ry = touch.touchMinor * 20;
-                canvas.drawOval(-rx, -ry, rx, ry, touchPaint);
-            }
-            canvas.rotate(touch.orientation);
-        }
         canvas.restore();
     }
 
 
-    private float[] fingerHSV = new float[]{0, 1, 1};
+    private final float[] fingerHSV = new float[]{0, 1, 1};
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -342,17 +238,7 @@ public class CapView extends View implements TouchMapCallback, CapImageStreamer.
             }
         }
         canvas.restore();
-
-        float statusTextHeight = statusTextPaint.getTextSize();
-        int statusTextY = 1;
-
-
     }
-
-    private double distance(double x1, double x2, double y1, double y2) {
-        return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-    }
-
 
     public void onResume() {
         capStreamer.start();
@@ -377,22 +263,4 @@ public class CapView extends View implements TouchMapCallback, CapImageStreamer.
         touchMap = newTouchMap;
     }
 
-
-    public void close() {
-        try {
-            writer.close();
-        } catch (IOException e) {
-            Log.e(TAG, "Error #004: " + e.toString());
-        }
-    }
-
-    private void saveToFile(String data) {
-        if (data.length() == 0)
-            return;
-        try {
-            writer.append(data + "\n");
-        } catch (Exception e) {
-            //Log.e(TAG," Error #002: " + e.toString());
-        }
-    }
 }

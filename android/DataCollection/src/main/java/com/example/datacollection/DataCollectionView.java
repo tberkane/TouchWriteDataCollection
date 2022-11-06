@@ -43,68 +43,78 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * View for collecting capacitance data from the user
+ */
 public class DataCollectionView extends View implements TouchTracker.TouchMapCallback, CapImageStreamer.CapImageCallback {
     static {
         OpenCVLoader.initDebug();
     }
 
     private static final String TAG = DataCollectionView.class.getSimpleName();
-    private final File root;
 
-    private List<String> letters;
-
-    private short[] capImage;
-
-    private CapImageStreamer capStreamer = new CapImageStreamer(this);
-    private TouchDetector touchDetector = new TouchDetector();
-    private TouchTracker touchTracker = new TouchTracker();
+    // cap data and touches
+    private final CapImageStreamer capStreamer = new CapImageStreamer(this);
+    private final TouchDetector touchDetector = new TouchDetector();
+    private final TouchTracker touchTracker = new TouchTracker();
     private TouchTracker.TouchMap prevTouchMap;
     private TouchTracker.TouchMap touchMap;
 
+    // cap image recording
+    private boolean recordCapImages;
+    private final Map<String, Map<Long, Map<String, short[]>>> recordedCapImages;
+    private final Gson gson;
+    private final File saveDirectory;
+
+    // letters
+    private final List<String> lettersToWrite;
+    private String currentLetterToWrite;
+
+    // drawing
+    private Canvas extraCanvas;
+    private Bitmap extraBitmap;
+    private final int backgroundColor;
+    private final Path path;
+    private final Paint paint;
+    private final Paint letterPaint;
+    private float letterXPos;
+    private float letterYPos;
+
+    // touch positions
     private float motionTouchEventX;
     private float motionTouchEventY;
-    private Path path;
     private float currentX;
     private float currentY;
     private final int touchTolerance;
-    private Canvas extraCanvas;
-    private Bitmap extraBitmap;
-    private final Paint paint;
-    private final int drawColor;
-    private final int backgroundColor;
-
-    private Paint letterPaint;
-    private float xPos;
-    private float yPos;
-    private String letter;
-
-    private Map<String, Map<Long, Map<String, short[]>>> capImages;
-
-    private boolean recordCapImages;
-    private Gson gson;
-
 
     public DataCollectionView(Context context) {
         super(context);
 
-        root = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "CapacitanceData");
-        Log.i(TAG, "Save Path: " + root);
-        if (!root.exists()) {
-            if (!root.mkdirs()) {
+        this.lettersToWrite = new ArrayList<>(Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+        Collections.shuffle(this.lettersToWrite);
+        this.currentLetterToWrite = lettersToWrite.remove(lettersToWrite.size() - 1);
+
+        this.recordCapImages = true;
+        this.recordedCapImages = new HashMap<>();
+        this.recordedCapImages.put(currentLetterToWrite, new HashMap<>());
+        this.gson = new Gson();
+        // initialize directory to save cap data and create it if needed
+        this.saveDirectory = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "CapacitanceData");
+        Log.i(TAG, "Save Path: " + saveDirectory);
+        if (!saveDirectory.exists()) {
+            if (!saveDirectory.mkdirs()) {
                 Log.e(TAG, "Error: Folder not created");
             }
         }
 
-
-        this.letters = new ArrayList<>(Arrays.asList("A", "B", "C"));
-        Collections.shuffle(this.letters);
+        this.touchTolerance = ViewConfiguration.get(context).getScaledTouchSlop();
 
         this.path = new Path();
-        this.touchTolerance = ViewConfiguration.get(context).getScaledTouchSlop();
-        this.paint = new Paint();
-        this.drawColor = ResourcesCompat.getColor(this.getResources(), R.color.black, null);
         this.backgroundColor = ResourcesCompat.getColor(this.getResources(), R.color.white, null);
-        this.paint.setColor(this.drawColor);
+
+        this.paint = new Paint();
+        int drawColor = ResourcesCompat.getColor(this.getResources(), R.color.black, null);
+        this.paint.setColor(drawColor);
         this.paint.setAntiAlias(true);
         this.paint.setDither(true);
         this.paint.setStyle(Paint.Style.STROKE);
@@ -114,30 +124,18 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
 
         this.letterPaint = new Paint();
         this.letterPaint.setTextAlign(Paint.Align.CENTER);
-        this.letterPaint.setTextSize(1000F);//sizes: 1000, normal size, in between, as big as possible
+        this.letterPaint.setTextSize(1000F);
         this.letterPaint.setColor(ContextCompat.getColor(this.getContext(), com.google.android.material.R.color.material_grey_100));
 
-        this.letter = letters.remove(letters.size() - 1);
-
-        this.capImages = new HashMap<>();
-        this.capImages.put(letter, new HashMap<>());
-
-        this.recordCapImages = true;
-        gson = new Gson();
 
     }
 
     @Override
     public void onCapImage(final CapacitiveImage sample) {
-        this.capImage = sample.getCapImg();
+        short[] capImage = sample.getCapImg();
         if (capImage != null && recordCapImages) {
 
-            capImages.get(letter).put(sample.getTimeStamp(), Map.of(
-                    "CAP_IMG", capImage,
-                    "PEN_POS", new short[]{(short) motionTouchEventX, (short) motionTouchEventY}
-            ));
-
-            ////TODO optimize this fct (see handik for secondary threads)
+            recordedCapImages.get(currentLetterToWrite).put(sample.getTimeStamp(), Map.of("CAP_IMG", Arrays.copyOf(capImage, capImage.length), "PEN_POS", new short[]{(short) motionTouchEventX, (short) motionTouchEventY}));
 
             byte[] threshCapImage = new byte[capImage.length];
             // thresholding
@@ -227,7 +225,6 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
                 }
             }
             // dirty fix for inverted axes
-//                Log.i(TAG, stylusX + "," + stylusY);
             Size screenSize = CapImage.getScreenSize();
             this.motionTouchEventX = stylusY;
             this.motionTouchEventY = screenSize.getWidth() - stylusX;
@@ -246,16 +243,18 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
 
     protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
         super.onSizeChanged(width, height, oldWidth, oldHeight);
+
         if (this.extraBitmap != null) {
             this.extraBitmap.recycle();
         }
+
         this.extraBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         this.extraCanvas = new Canvas(extraBitmap);
         this.extraCanvas.drawColor(backgroundColor);
 
-        this.xPos = width / 3f;
-        this.yPos = (height / 2f - (letterPaint.descent() + letterPaint.ascent()) / 2f);
-        extraCanvas.drawText(letter, xPos, yPos, letterPaint);
+        this.letterXPos = width / 3f;
+        this.letterYPos = (height / 2f - (letterPaint.descent() + letterPaint.ascent()) / 2f);
+        extraCanvas.drawText(currentLetterToWrite, letterXPos, letterYPos, letterPaint);
     }
 
     private void touchStart() {
@@ -282,7 +281,6 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
         this.path.reset();
     }
 
-
     @Override
     public void onNewTouchMap(TouchTracker.TouchMap newTouchMap) {
         prevTouchMap = touchMap;
@@ -297,21 +295,18 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
         capStreamer.stop();
     }
 
-    public void startNextLetter(AppCompatActivity a) {
-//        Map<Long, short[]> capImagesForLetterCopy = capImagesForLetter.entrySet().stream()
-//                .collect(Collectors.toMap(Map.Entry::getKey, e -> Arrays.copyOf(e.getValue(), e.getValue().length)));
-        recordCapImages = true;
-        if (letters.isEmpty()) {
+    public void startNextLetter(AppCompatActivity a, String participantId) {
+        if (lettersToWrite.isEmpty()) {
             recordCapImages = false;
-            String json = gson.toJson(capImages);
 
-
-            String filename = "recording_id" + 1 + ".json";
-            File file = new File(root, filename);
+            // convert data to json and save to fs
+            String jsonData = gson.toJson(recordedCapImages);
+            String filename = "recording_id" + participantId + ".json";
+            File file = new File(saveDirectory, filename);
             FileWriter writer = null;
             try {
                 writer = new FileWriter(file, false);
-                writer.write(json);
+                writer.write(jsonData);
             } catch (IOException e) {
                 Log.e(TAG, "Error:" + e);
             } finally {
@@ -322,14 +317,15 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
                 }
             }
 
-
             Intent intent = new Intent(a, EndActivity.class);
             startActivity(a, intent, null);
         } else {
-            this.letter = letters.remove(letters.size() - 1);
-            this.capImages.put(letter, new HashMap<>());
+            // get next letter
+            this.currentLetterToWrite = lettersToWrite.remove(lettersToWrite.size() - 1);
+            this.recordedCapImages.put(currentLetterToWrite, new HashMap<>());
+            // reset canvas and draw new outline
             this.extraCanvas.drawColor(backgroundColor);
-            extraCanvas.drawText(letter, xPos, yPos, letterPaint);
+            extraCanvas.drawText(currentLetterToWrite, letterXPos, letterYPos, letterPaint);
         }
     }
 }

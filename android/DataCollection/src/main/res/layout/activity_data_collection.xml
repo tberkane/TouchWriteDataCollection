@@ -5,7 +5,7 @@
     android:id="@+id/constraintLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".DataCollectionActivity2">
+    tools:context=".DataCollectionActivity">
 
     <com.example.datacollection.ReactiveButton
         android:id="@+id/nextButton"
@@ -15,7 +15,7 @@
         android:layout_marginTop="33dp"
         android:width="100dp"
         android:height="100dp"
-        android:text="Next"
+        android:text="@string/next"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

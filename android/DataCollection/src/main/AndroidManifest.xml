@@ -21,21 +21,14 @@
                 android:value="" />
         </activity>
         <activity
-            android:name=".DataCollectionActivity2"
-            android:exported="false">
-            <meta-data
-                android:name="android.app.lib_name"
-                android:value="" />
-        </activity>
-        <activity
-            android:name=".CapActivity"
-            android:exported="false">
-            <meta-data
-                android:name="android.app.lib_name"
-                android:value="" />
-        </activity>
-        <activity
             android:name=".DataCollectionActivity"
+            android:exported="false">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
+        <activity
+            android:name=".TestCapacitanceActivity"
             android:exported="false">
             <meta-data
                 android:name="android.app.lib_name"

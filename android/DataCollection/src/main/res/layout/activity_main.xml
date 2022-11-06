@@ -10,7 +10,7 @@
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="1. Write each letter with the stylus following the outline\n2. Click on next to move to the next letter\n3. Make sure your hand is always resting on the screen when writing\n4. Click on the button below when you are ready to start"
+        android:text="@string/_1_write_each_letter_with_the_stylus_following_the_outline_n2_click_on_next_to_move_to_the_next_letter_n3_make_sure_your_hand_is_always_resting_on_the_screen_when_writing_n4_click_on_the_button_below_when_you_are_ready_to_start"
         android:textSize="20sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -24,7 +24,7 @@
         android:layout_marginEnd="59dp"
         android:layout_marginBottom="38dp"
         android:onClick="startDataCollection"
-        android:text="Start"
+        android:text="@string/start"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="@+id/participantIdEditText" />
 
@@ -33,10 +33,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="42dp"
+        android:autofillHints=""
         android:ems="10"
-        android:hint="Participant ID"
+        android:hint="@string/participant_id"
         android:inputType="number"
         android:minHeight="48dp"
+        android:textColorHint="#757575"
         app:layout_constraintBottom_toTopOf="@+id/textView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.499"
@@ -49,7 +51,7 @@
         android:layout_marginStart="40dp"
         android:layout_marginBottom="38dp"
         android:onClick="testCapacitance"
-        android:text="Test capacitance"
+        android:text="@string/test_capacitance"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 

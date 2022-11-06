@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">TouchWriteDataCollection</string>
+    <string name="next">Next</string>
+    <string name="the_experiment_is_over_thank_you_for_your_time">The experiment is over. Thank you for your time!</string>
+    <string name="_1_write_each_letter_with_the_stylus_following_the_outline_n2_click_on_next_to_move_to_the_next_letter_n3_make_sure_your_hand_is_always_resting_on_the_screen_when_writing_n4_click_on_the_button_below_when_you_are_ready_to_start">1. Write each letter with the stylus following the outline\n2. Click on next to move to the next letter\n3. Make sure your hand is always resting on the screen when writing\n4. Click on the button below when you are ready to start</string>
+    <string name="start">Start</string>
+    <string name="participant_id">Participant ID</string>
+    <string name="test_capacitance">Test capacitance</string>
 </resources>

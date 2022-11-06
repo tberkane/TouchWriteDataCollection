@@ -12,9 +12,8 @@ import android.widget.EditText;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
-    Button startButton;
-    Button capacitanceButton;
-    EditText participantIdEditText;
+    private Button startButton;
+    private EditText participantIdEditText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,13 +21,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
 
-        capacitanceButton = findViewById(R.id.capacitanceButton);
-
         startButton = findViewById(R.id.startButton);
-        //startButton.setEnabled(false);
+//        startButton.setEnabled(false); //TODO
 
         participantIdEditText = findViewById(R.id.participantIdEditText);
-        participantIdEditText.addTextChangedListener(new TextWatcher() {
+        participantIdEditText.addTextChangedListener(new TextWatcher() { // only enable start button if ID has been set
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -36,8 +33,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count,
-                                          int after) {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
             }
 
@@ -50,13 +46,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startDataCollection(View view) {
-        Intent intent = new Intent(this, DataCollectionActivity2.class);
+        Intent intent = new Intent(this, DataCollectionActivity.class);
         intent.putExtra("participantId", participantIdEditText.getText().toString());
         startActivity(intent);
     }
 
     public void testCapacitance(View view) {
-        Intent intent = new Intent(this, CapActivity.class);
+        Intent intent = new Intent(this, TestCapacitanceActivity.class);
         startActivity(intent);
     }
 
