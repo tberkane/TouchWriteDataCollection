@@ -14,6 +14,7 @@ import android.util.Size;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
@@ -34,9 +35,7 @@ import org.opencv.imgproc.Imgproc;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -87,13 +86,14 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
     private float currentY;
     private final int touchTolerance;
     private final boolean rightHanded;
+    private final TextView tvInstruction;
 
-    public DataCollectionView(Context context, boolean rightHanded) {
+    public DataCollectionView(Context context, boolean rightHanded, List<String> lettersToWrite, TextView tvInstruction) {
         super(context);
 
+        this.tvInstruction = tvInstruction;
         this.rightHanded = rightHanded;
-        this.lettersToWrite = new ArrayList<>(Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
-        Collections.shuffle(this.lettersToWrite);
+        this.lettersToWrite = lettersToWrite;
         this.currentLetterToWrite = lettersToWrite.remove(lettersToWrite.size() - 1);
 
         this.recordCapImages = true;
@@ -128,8 +128,6 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
         this.letterPaint.setTextAlign(Paint.Align.CENTER);
         this.letterPaint.setTextSize(1000F);
         this.letterPaint.setColor(ContextCompat.getColor(this.getContext(), com.google.android.material.R.color.material_grey_100));
-
-
     }
 
     @Override
@@ -226,11 +224,11 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
 
 
             // fix because capacitive screen is weird...
-            for (int i = 0; i < capImage.length; i++) {
-                if (capImage[i] > 10) {
-                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
-                }
-            }
+//            for (int i = 0; i < capImage.length; i++) {
+//                if (capImage[i] > 10) {
+//                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
+//                }
+//            }
 
             touchTracker.update(touchDetector.findTouchPoints(capImage), DataCollectionView.this);
         }
@@ -293,13 +291,12 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
 
         this.extraBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         this.extraCanvas = new Canvas(extraBitmap);
-        this.extraCanvas.drawColor(backgroundColor);
         if (rightHanded)
             this.letterXPos = width / 3f;
         else
             this.letterXPos = 2f * width / 3f;
         this.letterYPos = (height / 2f - (letterPaint.descent() + letterPaint.ascent()) / 2f);
-        extraCanvas.drawText(currentLetterToWrite, letterXPos, letterYPos, letterPaint);
+        resetCanvas();
     }
 
     private void touchStart() {
@@ -342,8 +339,26 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
 
     // clear canvas and draw new outline
     private void resetCanvas() {
+        Log.i(TAG, currentLetterToWrite);
         this.extraCanvas.drawColor(backgroundColor);
-        extraCanvas.drawText(currentLetterToWrite, letterXPos, letterYPos, letterPaint);
+        switch (currentLetterToWrite.charAt(1)) {
+            case 's':
+                this.letterPaint.setTextSize(200F);
+                break;
+            case 'm':
+                this.letterPaint.setTextSize(500F);
+                break;
+            case 'l':
+                this.letterPaint.setTextSize(1000F);
+                break;
+        }
+        if (currentLetterToWrite.charAt(2) == 'g') {
+            tvInstruction.setText("Write a " + currentLetterToWrite.charAt(0) + " following the outline below.");
+            extraCanvas.drawText(String.valueOf(currentLetterToWrite.charAt(0)), letterXPos, letterYPos, letterPaint);
+        } else {
+            tvInstruction.setText("Write a " + currentLetterToWrite.charAt(0) + " in the box below.");
+            extraCanvas.drawRect(letterXPos - letterPaint.getTextSize() / 4f, letterYPos, letterXPos + letterPaint.getTextSize() / 4f, letterYPos - letterPaint.getTextSize() / 1.4f, letterPaint);
+        }
     }
 
     public void startNextLetter(AppCompatActivity a, String participantId) {

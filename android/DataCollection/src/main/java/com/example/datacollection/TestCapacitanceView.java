@@ -129,7 +129,6 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
             for (int i = 0; i < numCC; i++) {
                 double area = stats.get(i, Imgproc.CC_STAT_AREA)[0];
                 double x = stats.get(i, Imgproc.CC_STAT_LEFT)[0];
-                Log.i(TAG, x+", "+limitX);
                 if ((rightHanded && (x < limitX || x < 25)) || (!rightHanded && (x > limitX || x > 25)) || area > 12 || maxArea < 50) {
                     ccBlacklist.add(i);
                 }
@@ -154,11 +153,11 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
 
 
             // fix because capacitive screen is weird...
-            for (int i = 0; i < capImage.length; i++) {
-                if (capImage[i] > 10) {
-                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
-                }
-            }
+//            for (int i = 0; i < capImage.length; i++) {
+//                if (capImage[i] > 10) {
+//                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
+//                }
+//            }
 
             touchTracker.update(touchDetector.findTouchPoints(capImage), TestCapacitanceView.this);
         }

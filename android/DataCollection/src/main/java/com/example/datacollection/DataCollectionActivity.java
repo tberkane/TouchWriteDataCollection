@@ -6,11 +6,19 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.app.ActivityCompat;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Activity for collecting capacitance data from the user
@@ -31,24 +39,81 @@ public class DataCollectionActivity extends AppCompatActivity {
         this.participantId = intent.getStringExtra("participantId");
         this.rightHanded = intent.getBooleanExtra("rightHanded", true);
 
-        view = new DataCollectionView(this, rightHanded);
+        int numSamples = intent.getIntExtra("numSamples", 5);
+        boolean smallDigits = intent.getBooleanExtra("smallDigits", true);
+        boolean mediumDigits = intent.getBooleanExtra("mediumDigits", true);
+        boolean largeDigits = intent.getBooleanExtra("largeDigits", true);
+        boolean freeHand = intent.getBooleanExtra("freeHand", true);
 
+        List<String> digits = new ArrayList<>(Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+
+        List<String> sizeDigits = new ArrayList<>();
+        if (smallDigits)
+            for (String d : digits)
+                sizeDigits.add(d + "s");
+        if (mediumDigits)
+            for (String d : digits)
+                sizeDigits.add(d + "m");
+        if (largeDigits)
+            for (String d : digits)
+                sizeDigits.add(d + "l");
+
+
+        List<String> lettersToWrite = new ArrayList<>();
+        for (String d : sizeDigits) {
+            lettersToWrite.add(d + "g");
+        }
+        List<String> lettersToWrite2 = new ArrayList<>();
+        for (String d : lettersToWrite) {
+            for (int i = 0; i < numSamples; i++) {
+                lettersToWrite2.add(d + i);
+            }
+        }
+        Collections.shuffle(lettersToWrite2);
+
+        if (freeHand) {
+            List<String> freeHandDigits = new ArrayList<>();
+            for (String d : sizeDigits) {
+                freeHandDigits.add(d + "f");
+            }
+            List<String> freeHandDigits2 = new ArrayList<>();
+            for (String d : freeHandDigits) {
+                for (int i = 0; i < numSamples; i++) {
+                    freeHandDigits2.add(d + i);
+                }
+            }
+            Collections.shuffle(freeHandDigits2);
+            lettersToWrite2.addAll(freeHandDigits2);
+        }
+
+        Log.i(TAG, lettersToWrite2.toString());
         if (rightHanded)
             setContentView(R.layout.activity_data_collection_right_handed);
         else
             setContentView(R.layout.activity_data_collection_left_handed);
 
-        ReactiveButton nextButton = findViewById(R.id.nextButton);
-        nextButton.setOnClickListener(this::startNextLetter);
+        TextView tvInstruction = findViewById(R.id.textViewInstruction);
 
-        ReactiveButton resetButton = findViewById(R.id.resetButton);
-        resetButton.setOnClickListener(this::resetLetter);
+        view = new DataCollectionView(this, rightHanded, lettersToWrite2, tvInstruction);
+
+//        ReactiveButton nextButton = findViewById(R.id.nextButton);
+//        nextButton.setOnClickListener(this::startNextLetter);
+//
+//        ReactiveButton resetButton = findViewById(R.id.resetButton);
+//        resetButton.setOnClickListener(this::resetLetter);
 
         ConstraintLayout myLayout = findViewById(R.id.constraintLayout);
-
-        view.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT));
-
-        myLayout.addView(view);
+        ConstraintSet set = new ConstraintSet();
+        view.setId(View.generateViewId());
+        myLayout.addView(view, 0);
+        set.clone(myLayout);
+        set.connect(view.getId(), ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, 0);
+        set.connect(view.getId(), ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, 0);
+        set.connect(view.getId(), ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT, 0);
+        set.connect(view.getId(), ConstraintSet.RIGHT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT, 0);
+        set.constrainHeight(view.getId(), ConstraintLayout.LayoutParams.MATCH_PARENT);
+        set.constrainWidth(view.getId(), ConstraintLayout.LayoutParams.MATCH_PARENT);
+        set.applyTo(myLayout);
 
         isStoragePermissionGranted();
 
@@ -104,6 +169,41 @@ public class DataCollectionActivity extends AppCompatActivity {
     @Override
     public void onDestroy() {
         super.onDestroy();
+    }
+
+    /* Handle the volume buttons since the touchscreen might not work */
+    boolean isVolUp, isVolDown;
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        int keyCode = event.getKeyCode();
+        int action = event.getAction();
+        Log.i(TAG, String.valueOf(keyCode));
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_VOLUME_UP:
+                if (action == KeyEvent.ACTION_DOWN) {
+                    isVolUp = true;
+                    if (isVolDown)
+                        finish();
+                    else
+                        resetLetter(null);
+                } else if (action == KeyEvent.ACTION_UP) {
+                    isVolUp = false;
+                }
+                return true;
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+                if (action == KeyEvent.ACTION_DOWN) {
+                    isVolDown = true;
+                    if (isVolUp)
+                        finish();
+                    else
+                        startNextLetter(null);
+                } else if (action == KeyEvent.ACTION_UP) {
+                    isVolDown = false;
+                }
+                return true;
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     /**

@@ -7,6 +7,7 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Switch;
 
@@ -14,8 +15,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
     private Button startButton;
-    private EditText participantIdEditText;
+    private EditText participantIdEditText, editTextNumSamples;
     private Switch handSwitch;
+    private CheckBox checkBoxSmall, checkBoxMedium, checkBoxLarge, checkBoxFreeHand;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,6 +26,12 @@ public class MainActivity extends AppCompatActivity {
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
 
         handSwitch = findViewById(R.id.switch1);
+
+        editTextNumSamples = findViewById(R.id.editTextNumSamples);
+        checkBoxSmall = findViewById(R.id.checkBoxSmall);
+        checkBoxMedium = findViewById(R.id.checkBoxMedium);
+        checkBoxLarge = findViewById(R.id.checkBoxLarge);
+        checkBoxFreeHand = findViewById(R.id.checkBoxFreeHand);
 
         startButton = findViewById(R.id.startButton);
         startButton.setEnabled(false);
@@ -53,6 +61,11 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, DataCollectionActivity.class);
         intent.putExtra("participantId", participantIdEditText.getText().toString());
         intent.putExtra("rightHanded", handSwitch.isChecked());
+        intent.putExtra("numSamples", Integer.valueOf(editTextNumSamples.getText().toString()));
+        intent.putExtra("smallDigits", checkBoxSmall.isChecked());
+        intent.putExtra("mediumDigits", checkBoxMedium.isChecked());
+        intent.putExtra("largeDigits", checkBoxLarge.isChecked());
+        intent.putExtra("freeHand", checkBoxFreeHand.isChecked());
         startActivity(intent);
     }
 

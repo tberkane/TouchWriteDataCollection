@@ -70,4 +70,61 @@
         app:layout_constraintTop_toBottomOf="@+id/participantIdEditText"
         tools:ignore="UseSwitchCompatOrMaterialXml" />
 
+    <CheckBox
+        android:id="@+id/checkBoxSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:checked="true"
+        android:text="Small digits"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/participantIdEditText" />
+
+    <CheckBox
+        android:id="@+id/checkBoxMedium"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:checked="true"
+        android:text="Medium digits"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/checkBoxSmall" />
+
+    <CheckBox
+        android:id="@+id/checkBoxLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:checked="true"
+        android:text="Large digits"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/checkBoxMedium" />
+
+    <CheckBox
+        android:id="@+id/checkBoxFreeHand"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
+        android:checked="true"
+        android:text="Freehand"
+        app:layout_constraintBottom_toTopOf="@+id/checkBoxSmall"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <EditText
+        android:id="@+id/editTextNumSamples"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
+        android:ems="10"
+        android:hint="Num samples"
+        android:inputType="number"
+        android:minHeight="48dp"
+        android:text="5"
+        app:layout_constraintBottom_toTopOf="@+id/checkBoxFreeHand"
+        app:layout_constraintStart_toStartOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
