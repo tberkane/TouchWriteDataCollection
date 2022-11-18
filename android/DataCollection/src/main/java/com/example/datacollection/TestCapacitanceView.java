@@ -151,13 +151,12 @@ public class TestCapacitanceView extends View implements TouchMapCallback, CapIm
                 }
             }
 
-
             // fix because capacitive screen is weird...
-//            for (int i = 0; i < capImage.length; i++) {
-//                if (capImage[i] > 10) {
-//                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
-//                }
-//            }
+            for (int i = 0; i < capImage.length; i++) {
+                if (capImage[i] > 10) {
+                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
+                }
+            }
 
             touchTracker.update(touchDetector.findTouchPoints(capImage), TestCapacitanceView.this);
         }

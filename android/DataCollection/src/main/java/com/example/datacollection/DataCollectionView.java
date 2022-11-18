@@ -63,6 +63,7 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
     private boolean recordCapImages;
     private final Map<String, Map<Long, Map<String, short[]>>> recordedCapImages;
     private final Gson gson;
+    private FileWriter writer = null;
     private final File saveDirectory;
 
     // letters
@@ -88,7 +89,7 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
     private final boolean rightHanded;
     private final TextView tvInstruction;
 
-    public DataCollectionView(Context context, boolean rightHanded, List<String> lettersToWrite, TextView tvInstruction) {
+    public DataCollectionView(Context context, boolean rightHanded, List<String> lettersToWrite, TextView tvInstruction, String participantId) {
         super(context);
 
         this.tvInstruction = tvInstruction;
@@ -107,6 +108,13 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
             if (!saveDirectory.mkdirs()) {
                 Log.e(TAG, "Error: Folder not created");
             }
+        }
+        String filename = "recording_id" + participantId + "_" + (rightHanded ? "right" : "left") + "Handed.json";
+        File file = new File(saveDirectory, filename);
+        try {
+            writer = new FileWriter(file, false);
+        } catch (IOException e) {
+            Log.e(TAG, "Error:" + e);
         }
 
         this.touchTolerance = ViewConfiguration.get(context).getScaledTouchSlop();
@@ -223,12 +231,12 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
             }
 
 
-            // fix because capacitive screen is weird...
-//            for (int i = 0; i < capImage.length; i++) {
-//                if (capImage[i] > 10) {
-//                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
-//                }
-//            }
+//             fix because capacitive screen is weird...
+            for (int i = 0; i < capImage.length; i++) {
+                if (capImage[i] > 10) {
+                    capImage[i] = (short) (Math.sqrt(230 * capImage[i]) + 150);
+                }
+            }
 
             touchTracker.update(touchDetector.findTouchPoints(capImage), DataCollectionView.this);
         }
@@ -295,7 +303,7 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
             this.letterXPos = width / 3f;
         else
             this.letterXPos = 2f * width / 3f;
-        this.letterYPos = (height / 2f - (letterPaint.descent() + letterPaint.ascent()) / 2f);
+        this.letterYPos = height / 2f;
         resetCanvas();
     }
 
@@ -339,7 +347,6 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
 
     // clear canvas and draw new outline
     private void resetCanvas() {
-        Log.i(TAG, currentLetterToWrite);
         this.extraCanvas.drawColor(backgroundColor);
         switch (currentLetterToWrite.charAt(1)) {
             case 's':
@@ -354,34 +361,40 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
         }
         if (currentLetterToWrite.charAt(2) == 'g') {
             tvInstruction.setText("Write a " + currentLetterToWrite.charAt(0) + " following the outline below.");
-            extraCanvas.drawText(String.valueOf(currentLetterToWrite.charAt(0)), letterXPos, letterYPos, letterPaint);
+            extraCanvas.drawText(String.valueOf(currentLetterToWrite.charAt(0)), letterXPos, letterYPos - (letterPaint.descent() + letterPaint.ascent()) / 2f, letterPaint);
         } else {
-            tvInstruction.setText("Write a " + currentLetterToWrite.charAt(0) + " in the box below.");
-            extraCanvas.drawRect(letterXPos - letterPaint.getTextSize() / 4f, letterYPos, letterXPos + letterPaint.getTextSize() / 4f, letterYPos - letterPaint.getTextSize() / 1.4f, letterPaint);
+            tvInstruction.setText("Write a " + currentLetterToWrite.charAt(0) + " in the box below. Make it big enough to fill the box.");
+            extraCanvas.drawRect(letterXPos - letterPaint.getTextSize() / 4f, letterYPos - (letterPaint.descent() + letterPaint.ascent()) / 2f, letterXPos + letterPaint.getTextSize() / 4f, letterYPos - (letterPaint.descent() + letterPaint.ascent()) / 2f - letterPaint.getTextSize() / 1.4f, letterPaint);
+        }
+    }
+
+    private void saveToFile(String data) {
+        if (data.length() == 0)
+            return;
+        try {
+            writer.append(data).append("\n");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void close() {
+        try {
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     public void startNextLetter(AppCompatActivity a, String participantId) {
-        if (lettersToWrite.isEmpty()) {
-            recordCapImages = false;
+        // convert data to json and save to fs
+        recordCapImages = false;
+        String jsonData = gson.toJson(recordedCapImages);
+        recordedCapImages.clear();
+        saveToFile(jsonData);
 
-            // convert data to json and save to fs
-            String jsonData = gson.toJson(recordedCapImages);
-            String filename = "recording_id" + participantId + "_" + (rightHanded ? "right" : "left") + "Handed.json";
-            File file = new File(saveDirectory, filename);
-            FileWriter writer = null;
-            try {
-                writer = new FileWriter(file, false);
-                writer.write(jsonData);
-            } catch (IOException e) {
-                Log.e(TAG, "Error:" + e);
-            } finally {
-                try {
-                    writer.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+        if (lettersToWrite.isEmpty()) {
+            close();
 
             Intent intent = new Intent(a, EndActivity.class);
             startActivity(a, intent, null);
@@ -390,6 +403,7 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
             this.currentLetterToWrite = lettersToWrite.remove(lettersToWrite.size() - 1);
             this.recordedCapImages.put(currentLetterToWrite, new HashMap<>());
             resetCanvas();
+            recordCapImages = true;
         }
     }
 

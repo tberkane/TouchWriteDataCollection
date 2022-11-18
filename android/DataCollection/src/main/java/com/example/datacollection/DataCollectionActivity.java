@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Activity for collecting capacitance data from the user
@@ -30,6 +31,9 @@ public class DataCollectionActivity extends AppCompatActivity {
     private DataCollectionView view;
     private String participantId;
     private boolean rightHanded;
+    private int numTotalDigits;
+    private TextView tvProgress;
+    private int curDigit = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +73,7 @@ public class DataCollectionActivity extends AppCompatActivity {
                 lettersToWrite2.add(d + i);
             }
         }
-        Collections.shuffle(lettersToWrite2);
+        Collections.shuffle(lettersToWrite2, new Random(2));
 
         if (freeHand) {
             List<String> freeHandDigits = new ArrayList<>();
@@ -82,11 +86,13 @@ public class DataCollectionActivity extends AppCompatActivity {
                     freeHandDigits2.add(d + i);
                 }
             }
-            Collections.shuffle(freeHandDigits2);
+            Collections.shuffle(freeHandDigits2, new Random(1));
             lettersToWrite2.addAll(freeHandDigits2);
         }
 
-        Log.i(TAG, lettersToWrite2.toString());
+        numTotalDigits = lettersToWrite2.size();
+
+
         if (rightHanded)
             setContentView(R.layout.activity_data_collection_right_handed);
         else
@@ -94,7 +100,11 @@ public class DataCollectionActivity extends AppCompatActivity {
 
         TextView tvInstruction = findViewById(R.id.textViewInstruction);
 
-        view = new DataCollectionView(this, rightHanded, lettersToWrite2, tvInstruction);
+        view = new DataCollectionView(this, rightHanded, lettersToWrite2, tvInstruction, participantId);
+
+
+        this.tvProgress = findViewById(R.id.textViewProgress);
+        tvProgress.setText(curDigit + "/" + numTotalDigits);
 
 //        ReactiveButton nextButton = findViewById(R.id.nextButton);
 //        nextButton.setOnClickListener(this::startNextLetter);
@@ -178,7 +188,6 @@ public class DataCollectionActivity extends AppCompatActivity {
     public boolean dispatchKeyEvent(KeyEvent event) {
         int keyCode = event.getKeyCode();
         int action = event.getAction();
-        Log.i(TAG, String.valueOf(keyCode));
         switch (keyCode) {
             case KeyEvent.KEYCODE_VOLUME_UP:
                 if (action == KeyEvent.ACTION_DOWN) {
@@ -191,6 +200,7 @@ public class DataCollectionActivity extends AppCompatActivity {
                     isVolUp = false;
                 }
                 return true;
+            case 79: // headphones button
             case KeyEvent.KEYCODE_VOLUME_DOWN:
                 if (action == KeyEvent.ACTION_DOWN) {
                     isVolDown = true;
@@ -211,6 +221,9 @@ public class DataCollectionActivity extends AppCompatActivity {
      */
     public void startNextLetter(View view) {
         this.view.startNextLetter(this, participantId);
+        curDigit += 1;
+        tvProgress.setText(curDigit + "/" + numTotalDigits);
+
     }
 
     /**
