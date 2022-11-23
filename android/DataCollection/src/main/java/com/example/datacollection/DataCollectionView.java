@@ -142,6 +142,7 @@ public class DataCollectionView extends View implements TouchTracker.TouchMapCal
     public void onCapImage(final CapacitiveImage sample) {
         short[] capImage = sample.getCapImg();
         if (capImage != null && recordCapImages) {
+            Log.i(TAG, sample.getTimeStamp()+"");
             recordedCapImages.get(currentLetterToWrite).put(sample.getTimeStamp(), Map.of("CAP_IMG", Arrays.copyOf(capImage, capImage.length), "PEN_POS", new short[]{(short) motionTouchEventX, (short) motionTouchEventY}));
 
             byte[] threshCapImage = new byte[capImage.length];
