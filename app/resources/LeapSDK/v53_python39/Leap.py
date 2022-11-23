@@ -1393,6 +1393,7 @@ class Frame(Interface):
     __swig_getmethods__["hands"] = LeapPython.Frame_hands_get
     if _newclass:
         hands = _swig_property(LeapPython.Frame_hands_get)
+ 
     __swig_getmethods__["images"] = LeapPython.Frame_images_get
     if _newclass:
         images = _swig_property(LeapPython.Frame_images_get)
